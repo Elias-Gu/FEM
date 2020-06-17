@@ -1,17 +1,17 @@
+#include <vector>
 #include <iostream>
 
+#include <Eigen/Dense>
 #include <GLFW/glfw3.h>
+
+#include "constants.h"
+#include "renderer.h"
+#include "solver.h"
 
 
 /* Declarations */
 void initGLContext();
 GLFWwindow* initGLFWContext();
-// TODO: Clear this
-const double dx = 0.001;
-const int X_GRID = int(1 / dx);
-const int Y_GRID = int(1 / dx);
-const int X_WINDOW = 1400;
-const int Y_WINDOW = X_WINDOW * Y_GRID / X_GRID;
 
 
 /* -----------------------------------------------------------------------
@@ -21,13 +21,17 @@ const int Y_WINDOW = X_WINDOW * Y_GRID / X_GRID;
 
 int main()
 {
+	Renderer renderer;
+	Solver *Simulation = new Solver();
+
 	GLFWwindow* window = initGLFWContext();
 	initGLContext();
 	while (!glfwWindowShouldClose(window))
 	{
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// TODO: Draw call here
+		renderer.DrawMesh(Simulation->nodes_coo, Simulation->mesh);
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -74,6 +78,6 @@ void initGLContext()
 	glOrtho(0, X_GRID, 0, Y_GRID, -1, 1);					// original
 	glViewport(0, 0, (GLsizei)X_WINDOW, (GLsizei)Y_WINDOW);	// transfo
 
-	glClearColor(.55f, .55f, .55f, .0f);
+	glClearColor(.7f, .7f, .7f, .0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 }
