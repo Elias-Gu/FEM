@@ -20,7 +20,7 @@ public:
 
 	Loads loads;
 	std::vector<Vector2i> neumann_edges;
-	std::vector<int> dirichlet_nodes;
+	std::vector<bool> dirichlet_nodes;
 
 
 

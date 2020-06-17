@@ -22,6 +22,6 @@ struct Loads
 	std::vector<Vector2i> NeumannEdges(const std::vector<Vector2d>& coo);
 	double NeumannForce(const Vector2d& coo, const Vector2d& normal);
 
-	std::vector<int> DirichletNodes(const std::vector<Vector2d>& coo);
+	std::vector<bool> DirichletNodes(const std::vector<Vector2d>& coo);
 	double DirichletForce(const Vector2d& coo);
 };
