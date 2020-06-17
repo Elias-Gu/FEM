@@ -57,8 +57,8 @@ std::vector<bool> Loads::DirichletNodes(const std::vector<Vector2d>& coo)
 }
 
 
-double Loads::DirichletForce(const Vector2d& coo)
+double Loads::DirichletValue(const Vector2d& coo)
 {
-	double force_d = sin(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
-	return force_d;
+	double value_d = sin(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
+	return value_d;
 }

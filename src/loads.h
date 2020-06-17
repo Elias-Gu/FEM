@@ -23,5 +23,5 @@ struct Loads
 	double NeumannForce(const Vector2d& coo, const Vector2d& normal);
 
 	std::vector<bool> DirichletNodes(const std::vector<Vector2d>& coo);
-	double DirichletForce(const Vector2d& coo);
+	double DirichletValue(const Vector2d& coo);
 };

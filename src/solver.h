@@ -14,17 +14,22 @@ class Solver
 public:
 
 	/* Data */
-	std::vector<Vector2d> nodes_coo;			// Node coordinates
-	std::vector<Vector3i> mesh;				// Mesh connectivity
-	int Ne;									// Number of elements
+	int Nn;											// Number of nodes
+	std::vector<Vector2d> nodes_coo;				// Node coordinates
+	int Ne;											// Number of elements
+	std::vector<Vector3i> mesh;						// Mesh connectivity
+	int Nv;											// Number of vertices per elements
 
 	Loads loads;
 	std::vector<Vector2i> neumann_edges;
 	std::vector<bool> dirichlet_nodes;
 
+	SparseMatrix<double> global_stiffness;
+	std::vector<double> global_internal_force;
+	std::vector<double> global_dirichlet_force;
+	
 
-
-
+	
 	/* Constructors */
 	Solver();
 	~Solver() {}
@@ -34,6 +39,7 @@ public:
 	/* Functions */
 	Vector3d ShapeFunction(const Vector2d& local_coo);
 	std::vector<Vector2d> DShapeFunction();
-	Matrix2d ElementStiffness(const std::vector<Vector2d>& vertices_coo);
-	SparseMatrix<double> GlobalStiffness();
+
+	Matrix3d ElementStiffness(const std::vector<Vector2d>& vertices_coo);
+	void GlobalStiffness();
 };
