@@ -10,8 +10,8 @@ Solver::Solver()
 
 	// Nodes positions
 	nodes_coo.resize(Nn);
-	for (int i = 0; i < n; i++) {
-		for (int j = 0; j < n; j++)
+	for (size_t i = 0; i < n; i++) {
+		for (size_t j = 0; j < n; j++)
 		{
 			nodes_coo[i * n + j] = Vector2d(i * dx, j * dx);
 			nodes_coo[i * n + j][0] += 0.25;
@@ -22,10 +22,10 @@ Solver::Solver()
 
 	// Nodes connectivity
 	mesh.resize(Ne);
-	for (int i = 0; i < n - 1; i++) {
-		for (int j = 0; j < n - 1; j++) 
+	for (size_t i = 0; i < n - 1; i++) {
+		for (size_t j = 0; j < n - 1; j++)
 		{
-			int q = (n - 1) * i + j;
+			size_t q = (n - 1) * i + j;
 			mesh[2 * q] = Eigen::Vector3i((i + 1) * n + j, (i + 1) * n + j + 1, i * n + j);
 			mesh[2 * q + 1] = Eigen::Vector3i(i * n + j + 1, i * n + j, (i + 1) * n + j + 1);
 		}
@@ -127,4 +127,44 @@ void Solver::GlobalStiffness()
 	}
 
 	global_stiffness.setFromTriplets(global_entries.begin(), global_entries.end());
+}
+
+
+
+/* -----------------------------------------------------------------------
+|							 INTERNAL FORCE								 |
+----------------------------------------------------------------------- */
+
+
+Vector3d Solver::ElementInternalForce(const std::vector<Vector2d>& vertices_coo)
+{
+	// See 12.2 in Numerical Solution of Partial Differential Equations by the FEM, by C.Johnson
+	// TODO: time and see if degree 1 is much better
+	double area = 0.5;
+	std::vector<Vector2d> mids_iso = { Vector2d(0.5, 0.0), 
+									   Vector2d(0.5, 0.5), 
+									   Vector2d(0.0, 0.5) }; // Mid points in isoparametric element
+	std::vector<Vector3d> N_iso = { ShapeFunction(mids_iso[0]),
+									ShapeFunction(mids_iso[1]),
+									ShapeFunction(mids_iso[2]) };
+	// TODO: since we just need this, might be faster to get them from vertices_coo directly
+	std::vector<Vector2d> mids_global;
+	for (int i = 0; i < Nv; i++) 
+	{
+		mids_global[i].setZero();
+
+		for (int j = 0; j < Nv; j++)
+			mids_global[i] += N_iso[i][j] * vertices_coo[j];
+	}
+
+	Matrix2d Dm; Dm << vertices_coo[1][0] - vertices_coo[0][0], vertices_coo[2][0] - vertices_coo[0][0],
+		               vertices_coo[1][1] - vertices_coo[0][1], vertices_coo[2][1] - vertices_coo[0][1];
+	double Dm_det = Dm.determinant();
+
+	Vector3d element_internal_force; element_internal_force.setZero();
+	for (int i = 0; i < Nv; i++)
+		element_internal_force += N_iso[i] * loads.InternalForce(mids_global[i]) * area / 3.0;
+	element_internal_force *= Dm_det;
+
+	return element_internal_force;
 }

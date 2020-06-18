@@ -42,4 +42,7 @@ public:
 
 	Matrix3d ElementStiffness(const std::vector<Vector2d>& vertices_coo);
 	void GlobalStiffness();
+
+	Vector3d ElementInternalForce(const std::vector<Vector2d>& vertices_coo);
+	void GlobalInternalForce();
 };
