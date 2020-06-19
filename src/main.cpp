@@ -12,6 +12,21 @@
 /* Declarations */
 void initGLContext();
 GLFWwindow* initGLFWContext();
+Solver* Simulation;
+
+
+
+/* -----------------------------------------------------------------------
+|						  FINITE ELEMENT METHOD							 |
+----------------------------------------------------------------------- */
+
+
+void FiniteElementMethod()
+{
+	Simulation = new Solver();
+	Simulation->FEMSolver();
+}
+
 
 
 /* -----------------------------------------------------------------------
@@ -20,26 +35,37 @@ GLFWwindow* initGLFWContext();
 
 
 int main()
-{
-	Renderer renderer;
-	Solver *Simulation = new Solver();
-
-	GLFWwindow* window = initGLFWContext();
-	initGLContext();
-	while (!glfwWindowShouldClose(window))
-	{
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		renderer.DrawMesh(Simulation->nodes_coo, Simulation->mesh);
-
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	}
-
-	glfwTerminate();
+{	
+	FiniteElementMethod();
+	
+	Renderer renderer; 
+	renderer.OutputNodeCoordinates(Simulation->nodes_coo, Simulation->sol);
+	renderer.OutputMesh(Simulation->mesh);
 
 	return 0;
 }
+
+//int main()
+//{
+//	Renderer renderer;
+//	Solver *Simulation = new Solver();
+//
+//	GLFWwindow* window = initGLFWContext();
+//	initGLContext();
+//	while (!glfwWindowShouldClose(window))
+//	{
+//		glClear(GL_COLOR_BUFFER_BIT);
+//
+//		renderer.DrawMesh(Simulation->nodes_coo, Simulation->mesh);
+//
+//		glfwSwapBuffers(window);
+//		glfwPollEvents();
+//	}
+//
+//	glfwTerminate();
+//
+//	return 0;
+//}
 
 
 

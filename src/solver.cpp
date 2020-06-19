@@ -49,7 +49,16 @@ Solver::Solver()
 	global_stiffness.resize(Nn, Nn);
 	global_internal_force.setZero(Nn);
 	global_dirichlet_force.setZero(Nn);
+	global_neumann_force.setZero(Nn);
 	global_force.setZero(Nn);
+	sol.resize(Nn);
+
+	verbose = true;
+	if (verbose)
+	{
+		std::cout << "Number of nodes:    " << Nn << std::endl;
+		std::cout << "Number of elements: " << Ne << std::endl;
+	}
 }
 
 
@@ -144,6 +153,8 @@ void Solver::GlobalStiffness()
 	}
 
 	global_stiffness.setFromTriplets(global_entries.begin(), global_entries.end());
+	if (verbose)
+		std::cout << "GlobalStiffness DONE" << std::endl;
 }
 
 
@@ -206,6 +217,9 @@ void Solver::GlobalInternalForce()
 	for (int i = 0; i < Nn; i++)
 		for (size_t j = 0; j < incident_elements[i].size(); j++)
 			global_internal_force[i] += elements_internal_force[incident_elements[i][j][0]][incident_elements[i][j][1]];
+
+	if (verbose)
+		std::cout << "GlobalInternalForce DONE" << std::endl;
 }
 
 
@@ -227,7 +241,7 @@ Vector2d Solver::ElementNeumannForce(const std::vector<Vector2d>& vertices_coo)
 	std::vector<Vector2d> N_iso_line = { LineShapeFunction(pts_iso[0]), 
 										 LineShapeFunction(pts_iso[1]) };
 	std::vector<Vector2d> pts_global(2);
-	for (int i = 0; i < Nv; i++)
+	for (int i = 0; i < 2; i++)
 	{
 		pts_global[i].setZero();
 
@@ -260,6 +274,9 @@ void Solver::GlobalNeumannForce()
 		for (int i = 0; i < 2; i++)
 			global_neumann_force[neumann_edges[e][i]] += element_neumann_force[i];
 	}
+
+	if (verbose)
+		std::cout << "GlobalNeumannForce DONE" << std::endl;
 }
 
 
@@ -269,7 +286,36 @@ void Solver::GlobalNeumannForce()
 ----------------------------------------------------------------------- */
 
 
-void Solver::SolveSystem()
+void Solver::FEMSolver()
 {
+	GlobalStiffness();
+	GlobalInternalForce();
+	GlobalNeumannForce();
 
+	VectorXd global_force = global_internal_force - global_neumann_force;
+
+	// Compute force participation of dirichlet nodes
+	for (size_t i = 0; i < Nn; i++)
+	{
+		if (dirichlet_nodes[i])
+		{
+			global_stiffness.insert(i, i) = 1.0;
+			global_dirichlet_force[i] = -loads.DirichletValue(nodes_coo[i]);
+			global_force[i] = 0.0;
+		}
+	}
+	global_force -= global_dirichlet_force;
+	
+	if (verbose)
+		std::cout << "Solving linear system ..." << std::endl;
+
+	ConjugateGradient<SparseMatrix<double>, Lower | Upper> cg;
+	cg.compute(global_stiffness);
+	sol = cg.solve(global_force);
+
+	if (verbose)
+	{
+		std::cout << "... DONE" << std::endl;
+		std::cin.get();
+	}
 }

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <iostream>
 #include <vector>
 
 #include <Eigen/Dense>
+#include <Eigen/IterativeLinearSolvers>
 #include <Eigen/Sparse>
 
 #include "constants.h"
@@ -31,7 +33,11 @@ public:
 	VectorXd global_dirichlet_force;
 	VectorXd global_neumann_force;
 	VectorXd global_force;
+
+	VectorXd sol;
 	
+	bool verbose;
+
 
 	
 	/* Constructors */
@@ -54,5 +60,5 @@ public:
 	Vector2d ElementNeumannForce(const std::vector<Vector2d>& vertices_coo);
 	void GlobalNeumannForce();
 
-	void SolveSystem();
+	void FEMSolver();
 };

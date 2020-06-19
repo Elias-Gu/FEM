@@ -7,7 +7,7 @@
 
 double Loads::InternalForce(const Vector2d& coo)
 {
-	double force_f = 4 * double(PI) * sin(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[2]);
+	double force_f = 4 * double(PI) * sin(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
 	return force_f;
 }
 
@@ -36,6 +36,7 @@ double Loads::NeumannForce(const Vector2d& coo, const Vector2d& normal)
 {
 	Vector2d force_g = Vector2d(2 * double(PI) * cos(2 * double(PI) * coo[0]), -2 * double(PI) * sin(2 * double(PI) * coo[1]));
 	return force_g.dot(normal);
+	//return 0.0;
 }
 
 
