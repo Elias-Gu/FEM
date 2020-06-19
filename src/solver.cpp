@@ -14,22 +14,29 @@ Solver::Solver()
 		for (size_t j = 0; j < n; j++)
 		{
 			nodes_coo[i * n + j] = Vector2d(i * dx, j * dx);
-			nodes_coo[i * n + j][0] += 0.25;
-			nodes_coo[i * n + j][1] += 0.25;
+			//nodes_coo[i * n + j][0] += 0.25;
+			//nodes_coo[i * n + j][1] += 0.25;
 		}
 	}
 
 
 	// Nodes connectivity
 	mesh.resize(Ne);
-	for (size_t i = 0; i < n - 1; i++) {
-		for (size_t j = 0; j < n - 1; j++)
+	for (int i = 0; i < n - 1; i++) {
+		for (int j = 0; j < n - 1; j++)
 		{
-			size_t q = (n - 1) * i + j;
+			int q = (n - 1) * i + j;
 			mesh[2 * q] = Eigen::Vector3i((i + 1) * n + j, (i + 1) * n + j + 1, i * n + j);
 			mesh[2 * q + 1] = Eigen::Vector3i(i * n + j + 1, i * n + j, (i + 1) * n + j + 1);
 		}
 	}
+
+
+	// Incident element
+	incident_elements.resize(Nn);
+	for (int i = 0; i < Ne; i++)
+		for (int j = 0; j < 3; j++)
+			incident_elements[mesh[i][j]].push_back(Vector2i(i, j));
 
 
 	// Set boundary nodes/edges
@@ -40,8 +47,9 @@ Solver::Solver()
 
 	// Resize global arrays
 	global_stiffness.resize(Nn, Nn);
-	global_internal_force.resize(Nn);
-	global_dirichlet_force.resize(Nn);
+	global_internal_force.setZero(Nn);
+	global_dirichlet_force.setZero(Nn);
+	global_force.setZero(Nn);
 }
 
 
@@ -58,6 +66,15 @@ Vector3d Solver::ShapeFunction(const Vector2d& local_coo)
 	N[1] = local_coo[0];
 	N[2] = local_coo[1];
 	return N;
+}
+
+
+Vector2d Solver::LineShapeFunction(const double local_coo)
+{
+	Vector2d Nl;
+	Nl[0] = 1 - local_coo;
+	Nl[1] = local_coo;
+	return Nl;
 }
 
 
@@ -139,7 +156,7 @@ void Solver::GlobalStiffness()
 Vector3d Solver::ElementInternalForce(const std::vector<Vector2d>& vertices_coo)
 {
 	// See 12.2 in Numerical Solution of Partial Differential Equations by the FEM, by C.Johnson
-	// TODO: time and see if degree 1 is much better
+	// TODO: time and see if quadrature of degree 1 is much better
 	double area = 0.5;
 	std::vector<Vector2d> mids_iso = { Vector2d(0.5, 0.0), 
 									   Vector2d(0.5, 0.5), 
@@ -148,9 +165,9 @@ Vector3d Solver::ElementInternalForce(const std::vector<Vector2d>& vertices_coo)
 									ShapeFunction(mids_iso[1]),
 									ShapeFunction(mids_iso[2]) };
 	// TODO: since we just need this, might be faster to get them from vertices_coo directly
-	std::vector<Vector2d> mids_global;
+	std::vector<Vector2d> mids_global(Nv);
 	for (int i = 0; i < Nv; i++) 
-	{
+	{	//TODO: Check that setZero is actually doing what it is supposed to do
 		mids_global[i].setZero();
 
 		for (int j = 0; j < Nv; j++)
@@ -167,4 +184,92 @@ Vector3d Solver::ElementInternalForce(const std::vector<Vector2d>& vertices_coo)
 	element_internal_force *= Dm_det;
 
 	return element_internal_force;
+}
+
+
+void Solver::GlobalInternalForce()
+{
+	std::vector<Vector3d> elements_internal_force(Ne);
+
+	#pragma omp parallel for
+	for (int e = 0; e < Ne; e++)
+	{
+		// Get coordinates of element vertices
+		std::vector<Vector2d> vertices_coo(Nv);
+		for (size_t i = 0; i < Nv; i++)
+			vertices_coo[i] = nodes_coo[mesh[e][i]];
+
+		elements_internal_force[e] = ElementInternalForce(vertices_coo);
+	}
+
+	#pragma omp parallel for
+	for (int i = 0; i < Nn; i++)
+		for (size_t j = 0; j < incident_elements[i].size(); j++)
+			global_internal_force[i] += elements_internal_force[incident_elements[i][j][0]][incident_elements[i][j][1]];
+}
+
+
+
+/* -----------------------------------------------------------------------
+|							 BOUNDARY FORCES							 |
+----------------------------------------------------------------------- */
+
+
+Vector2d Solver::ElementNeumannForce(const std::vector<Vector2d>& vertices_coo)
+{
+
+	// TODO: time and see if quadrature of degree 1 is much better
+	double length = Vector2d(vertices_coo[1] - vertices_coo[0]).norm();
+	std::vector<double> pts_iso = { -1 / sqrt(3.0), 1 / sqrt(3.0) }; // Integration points on [-1,1]
+	for (auto& pt : pts_iso) 
+		pt = 0.5 * pt + 0.5;										 // Integration points on [0,1] (iso p element)
+	std::vector<double> weights = { 0.5, 0.5 };
+	std::vector<Vector2d> N_iso_line = { LineShapeFunction(pts_iso[0]), 
+										 LineShapeFunction(pts_iso[1]) };
+	std::vector<Vector2d> pts_global(2);
+	for (int i = 0; i < Nv; i++)
+	{
+		pts_global[i].setZero();
+
+		for (int j = 0; j < 2; j++)
+			pts_global[i] += N_iso_line[i][j] * vertices_coo[j];
+	}
+
+	Vector2d normal = Vector2d(-vertices_coo[1][1] + vertices_coo[0][1], vertices_coo[1][0] - vertices_coo[0][0]).normalized();
+
+	Vector2d element_neumann_force; element_neumann_force.setZero();
+	for (int i = 0; i < 2; i++)
+		element_neumann_force += weights[i] * N_iso_line[i] * loads.NeumannForce(pts_global[i], normal);
+	element_neumann_force *= length;
+
+	return element_neumann_force;
+}
+
+
+void Solver::GlobalNeumannForce()
+{
+	for (size_t e = 0; e < neumann_edges.size(); e++)
+	{
+		// Get coordinates of edge vertices
+		std::vector<Vector2d> vertices_coo(2);
+		for (size_t i = 0; i < 2; i++)
+			vertices_coo[i] = nodes_coo[neumann_edges[e][i]];
+
+		Vector2d element_neumann_force = ElementNeumannForce(vertices_coo);
+
+		for (int i = 0; i < 2; i++)
+			global_neumann_force[neumann_edges[e][i]] += element_neumann_force[i];
+	}
+}
+
+
+
+/* -----------------------------------------------------------------------
+|								SOLVE SYSTEM							 |
+----------------------------------------------------------------------- */
+
+
+void Solver::SolveSystem()
+{
+
 }
