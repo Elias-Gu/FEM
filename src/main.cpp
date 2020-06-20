@@ -42,6 +42,7 @@ int main()
 	renderer.OutputNodeCoordinates(Simulation->nodes_coo, Simulation->sol);
 	renderer.OutputMesh(Simulation->mesh);
 
+	std::cin.get();
 	return 0;
 }
 

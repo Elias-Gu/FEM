@@ -35,8 +35,8 @@ std::vector<Vector2i> Loads::NeumannEdges(const std::vector<Vector2d>& coo)
 double Loads::NeumannForce(const Vector2d& coo, const Vector2d& normal)
 {
 	Vector2d force_g = Vector2d(2 * double(PI) * cos(2 * double(PI) * coo[0]), -2 * double(PI) * sin(2 * double(PI) * coo[1]));
-	return force_g.dot(normal);
-	//return 0.0;
+	//return force_g.dot(normal);
+	return 0.0;
 }
 
 
@@ -60,6 +60,6 @@ std::vector<bool> Loads::DirichletNodes(const std::vector<Vector2d>& coo)
 
 double Loads::DirichletValue(const Vector2d& coo)
 {
-	double value_d = sin(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
+	double value_d = cos(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
 	return value_d;
 }

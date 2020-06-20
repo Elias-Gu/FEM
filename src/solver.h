@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <vector>
 
@@ -23,7 +25,6 @@ public:
 	std::vector<Vector3i> mesh;								// Mesh connectivity
 	std::vector<std::vector<Vector2i>> incident_elements;	// For each nodes, corresponding position in the incident element vectors
 
-
 	Loads loads;
 	std::vector<Vector2i> neumann_edges;
 	std::vector<bool> dirichlet_nodes;
@@ -37,6 +38,11 @@ public:
 	VectorXd sol;
 	
 	bool verbose;
+	double time_global_stiffness;
+	double time_global_internal_force;
+	double time_global_neumann_force;
+	double time_global_force;
+	double time_solve;
 
 
 	
