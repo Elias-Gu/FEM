@@ -20,5 +20,6 @@ struct Renderer
 	void DrawConnectivity(const std::vector<Eigen::Vector2d>& nodes_coo, const std::vector<Eigen::Vector3i>& connectivity);
 
 	void OutputNodeCoordinates(const std::vector<Eigen::Vector2d>& nodes_coo, const Eigen::VectorXd& sol);
+	void OutputNodeCoordinates(const std::vector<Eigen::Vector2d>& nodes_coo, const Eigen::VectorXd& sol, const int step);
 	void OutputMesh(const std::vector<Eigen::Vector3i>& mesh);
 };

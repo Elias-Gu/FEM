@@ -12,7 +12,7 @@
 /* Declarations */
 void initGLContext();
 GLFWwindow* initGLFWContext();
-Solver* Simulation;
+Solver* simulation;
 
 
 
@@ -23,8 +23,7 @@ Solver* Simulation;
 
 void FiniteElementMethod()
 {
-	Simulation = new Solver();
-	Simulation->FEMSolver();
+	
 }
 
 
@@ -36,11 +35,19 @@ void FiniteElementMethod()
 
 int main()
 {	
-	FiniteElementMethod();
-	
+	simulation = new Solver();
 	Renderer renderer; 
-	renderer.OutputNodeCoordinates(Simulation->nodes_coo, Simulation->sol);
-	renderer.OutputMesh(Simulation->mesh);
+
+	int step = 0;
+	simulation->FEMInit();
+	renderer.OutputNodeCoordinates(simulation->nodes_coo, simulation->sol,step);
+	while (simulation->tn < 8)//step < 2)
+	{
+		step++;
+		simulation->FEMStep();
+		renderer.OutputNodeCoordinates(simulation->nodes_coo, simulation->sol, step);
+
+	}
 
 	std::cin.get();
 	return 0;

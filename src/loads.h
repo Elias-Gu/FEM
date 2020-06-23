@@ -24,4 +24,5 @@ struct Loads
 
 	std::vector<bool> DirichletNodes(const std::vector<Vector2d>& coo);
 	double DirichletValue(const Vector2d& coo);
+	double DtDirichletValue(const Vector2d& coo);
 };

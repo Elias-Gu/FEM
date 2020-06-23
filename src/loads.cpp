@@ -7,8 +7,10 @@
 
 double Loads::InternalForce(const Vector2d& coo)
 {
-	double force_f = 4 * double(PI) * sin(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
-	return force_f;
+	//double force_f = 4 * double(PI) * sin(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
+	double force_f = 4 * double(PI) * sin(double(PI) * coo[0]) * sin(double(PI) * coo[1]);
+	return 0.0;
+	//return force_f;
 }
 
 
@@ -37,7 +39,7 @@ double Loads::NeumannForce(const Vector2d& coo, const Vector2d& normal)
 	Vector2d force_g = Vector2d(2 * double(PI) * cos(2 * double(PI) * coo[0]), -2 * double(PI) * sin(2 * double(PI) * coo[1]));
 	//return force_g.dot(normal);
 	//return 0.0;
-	return 1.0;
+	return 0.0;
 }
 
 
@@ -51,9 +53,9 @@ std::vector<bool> Loads::DirichletNodes(const std::vector<Vector2d>& coo)
 {
 	std::vector<bool> dirichlet_nodes(coo.size(), false);
 
-	for (size_t i = 0; i < coo.size(); i++)
-		if (i < n)
-			dirichlet_nodes[i] = true;
+	//for (size_t i = 0; i < coo.size(); i++)
+	//	if (i < n)
+	//		dirichlet_nodes[i] = true;
 
 	return dirichlet_nodes;
 }
@@ -62,5 +64,12 @@ std::vector<bool> Loads::DirichletNodes(const std::vector<Vector2d>& coo)
 double Loads::DirichletValue(const Vector2d& coo)
 {
 	double value_d = cos(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
-	return value_d;
+	return 0.0;
+	//return value_d;
+}
+
+
+double Loads::DtDirichletValue(const Vector2d& coo)
+{
+	return 0.0;
 }

@@ -18,6 +18,7 @@ class Solver
 public:
 
 	/* Data */
+	double tn;
 	int Nn;													// Number of nodes
 	int Ne;													// Number of elements
 	int Nv;													// Number of vertices per elements
@@ -36,8 +37,8 @@ public:
 	VectorXd global_neumann_force;
 	VectorXd global_force;
 
-	VectorXd sol_prev;
-	VectorXd sol_prev;
+	VectorXd sol;
+	VectorXd v_sol;
 	
 	bool verbose;
 	double time_global_stiffness;
@@ -62,11 +63,16 @@ public:
 	Matrix3d ElementStiffness(const std::vector<Vector2d>& vertices_coo);
 	void GlobalStiffness();
 
+	Matrix3d ElementMass(const std::vector<Vector2d>& vertices_coo);
+	void GlobalMass();
+
 	Vector3d ElementInternalForce(const std::vector<Vector2d>& vertices_coo);
 	void GlobalInternalForce();
 
 	Vector2d ElementNeumannForce(const std::vector<Vector2d>& vertices_coo);
 	void GlobalNeumannForce();
 
-	void FEMSolver();
+	void FEMInit();
+	void FEMResetMatrices();
+	void FEMStep();
 };

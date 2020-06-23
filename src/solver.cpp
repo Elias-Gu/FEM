@@ -3,6 +3,8 @@
 /* Constructors */
 Solver::Solver()
 {
+	tn = 0;
+
 	// Triangular mesh
 	Nn = n * n;
 	Ne = 2 * (n - 1) * (n - 1);
@@ -47,11 +49,13 @@ Solver::Solver()
 
 	// Resize global arrays
 	global_stiffness.resize(Nn, Nn);
+	global_mass.resize(Nn, Nn);
 	global_internal_force.setZero(Nn);
 	global_dirichlet_force.setZero(Nn);
 	global_neumann_force.setZero(Nn);
 	global_force.setZero(Nn);
 	sol.resize(Nn);
+	v_sol.resize(Nn);
 
 	verbose = true;
 	if (verbose)
@@ -148,7 +152,7 @@ void Solver::GlobalStiffness()
 				vertices_coo[i] = nodes_coo[mesh[e][i]];
 
 			Matrix3d element_stiffness = ElementStiffness(vertices_coo);
-
+			elements_dirichlet_force[e].setZero();
 			for (int i = 0; i < Nv; i++)
 			{
 				if (!dirichlet_nodes[mesh[e][i]])
@@ -161,8 +165,8 @@ void Solver::GlobalStiffness()
 							elements_dirichlet_force[e][i] += element_stiffness(i, j) * loads.DirichletValue(nodes_coo[mesh[e][j]]);
 					}
 				}
-				else
-					global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][i], 1.0 / incident_elements[mesh[e][i]].size()));
+				//else
+					//global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][i], 1.0 / incident_elements[mesh[e][i]].size()));
 			}
 		}
 
@@ -193,37 +197,37 @@ void Solver::GlobalStiffness()
 
 
 /* -----------------------------------------------------------------------
-|							STIFFNESS MATRIX							 |
+|							 MASS MATRIX								 |
 ----------------------------------------------------------------------- */
 
-
-Matrix3d Solver::ElementStiffness(const std::vector<Vector2d>& vertices_coo)
+Matrix3d Solver::ElementMass(const std::vector<Vector2d>& vertices_coo)
 {
-	std::vector<Vector2d> dN = DShapeFunction();
+	double area = 0.5;
+	std::vector<Vector2d> mids_iso = { Vector2d(0.5, 0.0),
+									   Vector2d(0.5, 0.5),
+									   Vector2d(0.0, 0.5) }; // Mid points in isoparametric element
+	std::vector<Vector3d> N_iso = { ShapeFunction(mids_iso[0]),
+									ShapeFunction(mids_iso[1]),
+									ShapeFunction(mids_iso[2]) };
 
 	Matrix2d Dm; Dm << vertices_coo[1][0] - vertices_coo[0][0], vertices_coo[2][0] - vertices_coo[0][0],
 		vertices_coo[1][1] - vertices_coo[0][1], vertices_coo[2][1] - vertices_coo[0][1];
-	Matrix2d Dm_inverse = Dm.inverse();
-	Matrix2d B = Dm_inverse * Dm_inverse.transpose() * Dm.determinant() / 2.0;
+	double Dm_det = Dm.determinant();
 
-	Matrix3d element_stiffness;
-	for (int i = 0; i < Nv; i++) {
+
+	Matrix3d element_mass; element_mass.setZero();
+	for (int i = 0; i < Nv; i++)
 		for (int j = 0; j < Nv; j++)
-		{
-			element_stiffness(i, j) = dN[i].transpose() * B * dN[j];
-		}
-	}
+			for (int k = 0; k < Nv; k++)
+				element_mass(i, j) += N_iso[i][k] * N_iso[j][k];
+	element_mass *= (Dm_det * area / 3.0);
 
-	return element_stiffness;
+	return element_mass;
 }
 
 
-void Solver::GlobalStiffness()
+void Solver::GlobalMass()
 {
-	auto start = std::chrono::high_resolution_clock::now();
-	if (verbose)
-		std::cout << "GlobalStiffness ... ";
-
 	std::vector<Triplet<double>> global_entries;
 	std::vector<Vector3d> elements_dirichlet_force(Ne);
 
@@ -240,7 +244,8 @@ void Solver::GlobalStiffness()
 			for (size_t i = 0; i < Nv; i++)
 				vertices_coo[i] = nodes_coo[mesh[e][i]];
 
-			Matrix3d element_stiffness = ElementStiffness(vertices_coo);
+			Matrix3d element_mass = ElementMass(vertices_coo);
+			elements_dirichlet_force[e].setZero();
 
 			for (int i = 0; i < Nv; i++)
 			{
@@ -249,9 +254,9 @@ void Solver::GlobalStiffness()
 					for (int j = 0; j < Nv; j++)
 					{
 						if (!dirichlet_nodes[mesh[e][j]])	// Add stiffness entry for free nodes
-							global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][j], element_stiffness(i, j)));
+							global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][j], element_mass(i, j)));
 						else								// Add force contribution of dirichlet nodes
-							elements_dirichlet_force[e][i] += element_stiffness(i, j) * loads.DirichletValue(nodes_coo[mesh[e][j]]);
+							elements_dirichlet_force[e][i] += element_mass(i, j) * loads.DtDirichletValue(nodes_coo[mesh[e][j]]);
 					}
 				}
 				else
@@ -265,22 +270,13 @@ void Solver::GlobalStiffness()
 	}
 
 	// Form global stiffness matrix from list of triplets
-	global_stiffness.setFromTriplets(global_entries.begin(), global_entries.end());
+	global_mass.setFromTriplets(global_entries.begin(), global_entries.end());
 
 	// Form global force created by dirichlet nodes
 	#pragma omp parallel for
 	for (int i = 0; i < Nn; i++)
 		for (size_t j = 0; j < incident_elements[i].size(); j++)
 			global_dirichlet_force[i] += elements_dirichlet_force[incident_elements[i][j][0]][incident_elements[i][j][1]];
-
-	if (verbose)
-	{
-		auto stop = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> elapsed = stop - start;
-		time_global_stiffness = (double)(elapsed.count() * 1000.0);
-		std::cout << "      DONE";
-		std::cout << " -- " << time_global_stiffness << " ms" << std::endl;
-	}
 }
 
 
@@ -431,57 +427,50 @@ void Solver::GlobalNeumannForce()
 ----------------------------------------------------------------------- */
 
 
-void Solver::FEMSolver()
+void Solver::FEMInit()
 {
+	// Compute global_mass and global_stiffness
+	for (int i = 0; i < Nn; i++)
+		sol[i] = 4 * double(PI) * sin(double(PI) * nodes_coo[i][0]) * sin(double(PI) * nodes_coo[i][1]);
+}
+
+
+void Solver::FEMResetMatrices()
+{
+	global_stiffness.setZero();
+	global_mass.setZero();
+	global_internal_force.setZero();
+	global_dirichlet_force.setZero();
+	global_neumann_force.setZero();
+	global_force.setZero();
+}
+
+
+void Solver::FEMStep()
+{
+	FEMResetMatrices();
+
+	GlobalMass();
 	GlobalStiffness();
 	GlobalInternalForce();
 	GlobalNeumannForce();
 
-	auto start = std::chrono::high_resolution_clock::now();
-	if (verbose)
-		std::cout << "GlobalForce ... ";
+	global_force = global_internal_force + global_neumann_force - global_dirichlet_force;
 
-	VectorXd global_force = global_internal_force - global_neumann_force;
+	//std::cout << "MASS MATRIX" << std::endl;
+	//std::cout << global_mass << std::endl;
+	//std::cout << std::endl;
+	//std::cout << "STIFFNESS MATRIX" << std::endl;
+	//std::cout << global_stiffness << std::endl;
+	//std::cout << std::endl;
+	//std::cout << "FORCE VECTOR" << std::endl;
+	//std::cout << global_force << std::endl;
+	//std::cout << std::endl;
 
-	#pragma omp parallel for schedule (dynamic)
-	for (int i = 0; i < Nn; i++)
-	{
-		if (dirichlet_nodes[i])
-		{
-			global_dirichlet_force[i] = -loads.DirichletValue(nodes_coo[i]);
-			global_force[i] = 0.0;
-		}
-	}
-	global_force -= global_dirichlet_force;
-	
-	if (verbose)
-	{
-		auto stop = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> elapsed = stop - start;
-		time_global_force = (double)(elapsed.count() * 1000.0);
-		std::cout << "          DONE";
-		std::cout << " -- " << time_global_force << " ms" << std::endl;
-		std::cout << "Solving linear system ... ";
-	}
+	VectorXd RHS = (global_mass - dt * global_stiffness) * sol + dt * global_force;
 
-	ConjugateGradient<SparseMatrix<double>, Lower | Upper> cg;
-	cg.compute(global_stiffness);
-	sol = cg.solve(global_force);
+	ConjugateGradient<SparseMatrix<double>, Eigen::Upper> solver;
+	sol = solver.compute(global_mass).solve(RHS);
 
-	if (verbose)
-	{
-		auto stop = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> elapsed = stop - start;
-		time_solve = (double)(elapsed.count() * 1000.0);
-		std::cout << "DONE";
-		std::cout << " -- " << time_solve << " ms" << std::endl;
-		std::cout << "--------------------------------------------" << std::endl;
-		double total_time = time_global_stiffness + time_global_internal_force + time_global_neumann_force + time_global_force + time_solve;
-		std::cout << std::fixed << std::setprecision(2);
-		std::cout << "GlobalStiffness     -- " << time_global_stiffness / total_time * 100 << "%" << std::endl;
-		std::cout << "GlobalInternalForce -- " << time_global_internal_force / total_time * 100 << "%" << std::endl;
-		std::cout << "GlobalNeumannForce  -- " << time_global_neumann_force / total_time * 100 << "%" << std::endl;
-		std::cout << "GlobalForce         -- " << time_global_force / total_time * 100 << "%" << std::endl;
-		std::cout << "FEMSolver           -- " << time_solve / total_time * 100 << "%" << std::endl;
-	}
+	tn += dt;
 }
