@@ -193,6 +193,98 @@ void Solver::GlobalStiffness()
 
 
 /* -----------------------------------------------------------------------
+|							STIFFNESS MATRIX							 |
+----------------------------------------------------------------------- */
+
+
+Matrix3d Solver::ElementStiffness(const std::vector<Vector2d>& vertices_coo)
+{
+	std::vector<Vector2d> dN = DShapeFunction();
+
+	Matrix2d Dm; Dm << vertices_coo[1][0] - vertices_coo[0][0], vertices_coo[2][0] - vertices_coo[0][0],
+		vertices_coo[1][1] - vertices_coo[0][1], vertices_coo[2][1] - vertices_coo[0][1];
+	Matrix2d Dm_inverse = Dm.inverse();
+	Matrix2d B = Dm_inverse * Dm_inverse.transpose() * Dm.determinant() / 2.0;
+
+	Matrix3d element_stiffness;
+	for (int i = 0; i < Nv; i++) {
+		for (int j = 0; j < Nv; j++)
+		{
+			element_stiffness(i, j) = dN[i].transpose() * B * dN[j];
+		}
+	}
+
+	return element_stiffness;
+}
+
+
+void Solver::GlobalStiffness()
+{
+	auto start = std::chrono::high_resolution_clock::now();
+	if (verbose)
+		std::cout << "GlobalStiffness ... ";
+
+	std::vector<Triplet<double>> global_entries;
+	std::vector<Vector3d> elements_dirichlet_force(Ne);
+
+	// Each thread creates its own vector of triplets
+	#pragma omp parallel
+	{
+		std::vector<Triplet<double>> global_entries_private;
+
+		#pragma omp for nowait
+		for (int e = 0; e < Ne; e++)
+		{
+			// Get coordinates of element vertices
+			std::vector<Vector2d> vertices_coo(Nv);
+			for (size_t i = 0; i < Nv; i++)
+				vertices_coo[i] = nodes_coo[mesh[e][i]];
+
+			Matrix3d element_stiffness = ElementStiffness(vertices_coo);
+
+			for (int i = 0; i < Nv; i++)
+			{
+				if (!dirichlet_nodes[mesh[e][i]])
+				{
+					for (int j = 0; j < Nv; j++)
+					{
+						if (!dirichlet_nodes[mesh[e][j]])	// Add stiffness entry for free nodes
+							global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][j], element_stiffness(i, j)));
+						else								// Add force contribution of dirichlet nodes
+							elements_dirichlet_force[e][i] += element_stiffness(i, j) * loads.DirichletValue(nodes_coo[mesh[e][j]]);
+					}
+				}
+				else
+					global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][i], 1.0 / incident_elements[mesh[e][i]].size()));
+			}
+		}
+
+		// Combine all the vector of triplets
+		#pragma omp critical
+		global_entries.insert(global_entries.end(), global_entries_private.begin(), global_entries_private.end());
+	}
+
+	// Form global stiffness matrix from list of triplets
+	global_stiffness.setFromTriplets(global_entries.begin(), global_entries.end());
+
+	// Form global force created by dirichlet nodes
+	#pragma omp parallel for
+	for (int i = 0; i < Nn; i++)
+		for (size_t j = 0; j < incident_elements[i].size(); j++)
+			global_dirichlet_force[i] += elements_dirichlet_force[incident_elements[i][j][0]][incident_elements[i][j][1]];
+
+	if (verbose)
+	{
+		auto stop = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> elapsed = stop - start;
+		time_global_stiffness = (double)(elapsed.count() * 1000.0);
+		std::cout << "      DONE";
+		std::cout << " -- " << time_global_stiffness << " ms" << std::endl;
+	}
+}
+
+
+/* -----------------------------------------------------------------------
 |							 INTERNAL FORCE								 |
 ----------------------------------------------------------------------- */
 

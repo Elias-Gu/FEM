@@ -30,12 +30,14 @@ public:
 	std::vector<bool> dirichlet_nodes;
 
 	SparseMatrix<double> global_stiffness;
+	SparseMatrix<double> global_mass;
 	VectorXd global_internal_force;
 	VectorXd global_dirichlet_force;
 	VectorXd global_neumann_force;
 	VectorXd global_force;
 
-	VectorXd sol;
+	VectorXd sol_prev;
+	VectorXd sol_prev;
 	
 	bool verbose;
 	double time_global_stiffness;
