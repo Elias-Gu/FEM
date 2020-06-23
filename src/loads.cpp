@@ -39,7 +39,11 @@ double Loads::NeumannForce(const Vector2d& coo, const Vector2d& normal)
 	Vector2d force_g = Vector2d(2 * double(PI) * cos(2 * double(PI) * coo[0]), -2 * double(PI) * sin(2 * double(PI) * coo[1]));
 	//return force_g.dot(normal);
 	//return 0.0;
-	return 0.0;
+	//return 5.0;
+	if (coo[0] == 1)
+		return 20.0;
+	else
+		return 0.0;
 }
 
 
@@ -53,9 +57,9 @@ std::vector<bool> Loads::DirichletNodes(const std::vector<Vector2d>& coo)
 {
 	std::vector<bool> dirichlet_nodes(coo.size(), false);
 
-	//for (size_t i = 0; i < coo.size(); i++)
-	//	if (i < n)
-	//		dirichlet_nodes[i] = true;
+	for (size_t i = 0; i < coo.size(); i++)
+		if (i < n)
+			dirichlet_nodes[i] = true;
 
 	return dirichlet_nodes;
 }

@@ -467,10 +467,17 @@ void Solver::FEMStep()
 	//std::cout << global_force << std::endl;
 	//std::cout << std::endl;
 
-	VectorXd RHS = (global_mass - dt * global_stiffness) * sol + dt * global_force;
+	//VectorXd RHS = (global_mass - dt * global_stiffness) * sol + dt * global_force;
+
+	//ConjugateGradient<SparseMatrix<double>, Eigen::Upper> solver;
+	//sol = solver.compute(global_mass).solve(RHS);
+	double alpha = 1.0;
+	VectorXd global_force_p1 = global_force;
+	SparseMatrix<double> LHS = global_mass + alpha * dt * global_stiffness;
+	VectorXd RHS = (global_mass - (1 - alpha) * dt * global_stiffness) * sol + dt * (alpha * global_force_p1 + (1.0 - alpha) * global_force);
 
 	ConjugateGradient<SparseMatrix<double>, Eigen::Upper> solver;
-	sol = solver.compute(global_mass).solve(RHS);
+	sol = solver.compute(LHS).solve(RHS);
 
 	tn += dt;
 }
