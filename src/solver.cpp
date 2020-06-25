@@ -162,7 +162,7 @@ void Solver::GlobalStiffness()
 						if (!dirichlet_nodes[mesh[e][j]])	// Add stiffness entry for free nodes
 							global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][j], element_stiffness(i, j)));
 						else								// Add force contribution of dirichlet nodes
-							elements_dirichlet_force[e][i] += element_stiffness(i, j) * loads.DirichletValue(nodes_coo[mesh[e][j]]);
+							elements_dirichlet_force[e][i] += element_stiffness(i, j) * loads.DirichletValue(nodes_coo[mesh[e][j]], tn);
 					}
 				}
 				//else
@@ -256,7 +256,7 @@ void Solver::GlobalMass()
 						if (!dirichlet_nodes[mesh[e][j]])	// Add stiffness entry for free nodes
 							global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][j], element_mass(i, j)));
 						else								// Add force contribution of dirichlet nodes
-							elements_dirichlet_force[e][i] += element_mass(i, j) * loads.DtDirichletValue(nodes_coo[mesh[e][j]]);
+							elements_dirichlet_force[e][i] += element_mass(i, j) * loads.DtDirichletValue(nodes_coo[mesh[e][j]], tn);
 					}
 				}
 				else
@@ -384,7 +384,7 @@ Vector2d Solver::ElementNeumannForce(const std::vector<Vector2d>& vertices_coo)
 
 	Vector2d element_neumann_force; element_neumann_force.setZero();
 	for (int i = 0; i < 2; i++)
-		element_neumann_force += weights[i] * N_iso_line[i] * loads.NeumannForce(pts_global[i], normal);
+		element_neumann_force += weights[i] * N_iso_line[i] * loads.NeumannForce(pts_global[i], normal, tn);
 	element_neumann_force *= length;
 
 	return element_neumann_force;
@@ -431,7 +431,8 @@ void Solver::FEMInit()
 {
 	// Compute global_mass and global_stiffness
 	for (int i = 0; i < Nn; i++)
-		sol[i] = 4 * double(PI) * sin(double(PI) * nodes_coo[i][0]) * sin(double(PI) * nodes_coo[i][1]);
+		sol[i] = 4.0;
+		//sol[i] = 4 * double(PI) * sin(double(PI) * nodes_coo[i][0]) * sin(double(PI) * nodes_coo[i][1]) + 4.0;
 }
 
 
@@ -472,9 +473,17 @@ void Solver::FEMStep()
 	//ConjugateGradient<SparseMatrix<double>, Eigen::Upper> solver;
 	//sol = solver.compute(global_mass).solve(RHS);
 	double alpha = 1.0;
+	//for (int i = 0; i < Nn; i++)
+	//	if (dirichlet_nodes[i])
+	//		global_force[i] = loads.DirichletValue(nodes_coo[i], tn);
+
+
 	VectorXd global_force_p1 = global_force;
 	SparseMatrix<double> LHS = global_mass + alpha * dt * global_stiffness;
 	VectorXd RHS = (global_mass - (1 - alpha) * dt * global_stiffness) * sol + dt * (alpha * global_force_p1 + (1.0 - alpha) * global_force);
+	for (int i = 0; i < Nn; i++)
+	if (dirichlet_nodes[i])
+		RHS[i] = loads.DirichletValue(nodes_coo[i], tn);
 
 	ConjugateGradient<SparseMatrix<double>, Eigen::Upper> solver;
 	sol = solver.compute(LHS).solve(RHS);
