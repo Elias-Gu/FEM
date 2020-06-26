@@ -56,6 +56,7 @@ Solver::Solver()
 	global_force.setZero(Nn);
 	sol.resize(Nn);
 	v_sol.resize(Nn);
+	//TODO: Resize reduc matrices
 
 	verbose = true;
 	if (verbose)
@@ -155,8 +156,8 @@ void Solver::GlobalStiffness()
 			elements_dirichlet_force[e].setZero();
 			for (int i = 0; i < Nv; i++)
 			{
-				//if (!dirichlet_nodes[mesh[e][i]])
-				//{
+				if (!dirichlet_nodes[mesh[e][i]])
+				{
 					for (int j = 0; j < Nv; j++)
 					{
 						//if (!dirichlet_nodes[mesh[e][j]])	// Add stiffness entry for free nodes
@@ -164,7 +165,7 @@ void Solver::GlobalStiffness()
 						//else								// Add force contribution of dirichlet nodes
 						//	elements_dirichlet_force[e][i] += element_stiffness(i, j) * loads.DirichletValue(nodes_coo[mesh[e][j]], tn);
 					}
-				//}
+				}
 				//else
 					//global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][i], 1.0 / incident_elements[mesh[e][i]].size()));
 			}
@@ -229,7 +230,6 @@ Matrix3d Solver::ElementMass(const std::vector<Vector2d>& vertices_coo)
 void Solver::GlobalMass()
 {
 	std::vector<Triplet<double>> global_entries;
-	std::vector<Vector3d> elements_dirichlet_force(Ne);
 
 	// Each thread creates its own vector of triplets
 	#pragma omp parallel
@@ -245,22 +245,20 @@ void Solver::GlobalMass()
 				vertices_coo[i] = nodes_coo[mesh[e][i]];
 
 			Matrix3d element_mass = ElementMass(vertices_coo);
-			elements_dirichlet_force[e].setZero();
 
 			for (int i = 0; i < Nv; i++)
 			{
-				//if (!dirichlet_nodes[mesh[e][i]])
-				//{
+				//TODO: Don't need to fill in the rows
+				if (!dirichlet_nodes[mesh[e][i]])
+				{
 					for (int j = 0; j < Nv; j++)
 					{
 						//if (!dirichlet_nodes[mesh[e][j]])	// Add stiffness entry for free nodes
 							global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][j], element_mass(i, j)));
-						//else								// Add force contribution of dirichlet nodes
-						//	elements_dirichlet_force[e][i] += element_mass(i, j) * loads.DtDirichletValue(nodes_coo[mesh[e][j]], tn);
 					}
-				//}
-				//else
-				//	global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][i], 1.0 / incident_elements[mesh[e][i]].size()));
+				}
+				else
+					global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][i], 1.0 / incident_elements[mesh[e][i]].size()));
 			}
 		}
 
@@ -271,12 +269,6 @@ void Solver::GlobalMass()
 
 	// Form global stiffness matrix from list of triplets
 	global_mass.setFromTriplets(global_entries.begin(), global_entries.end());
-
-	// Form global force created by dirichlet nodes
-	//#pragma omp parallel for
-	//for (int i = 0; i < Nn; i++)
-	//	for (size_t j = 0; j < incident_elements[i].size(); j++)
-	//		global_dirichlet_force[i] += elements_dirichlet_force[incident_elements[i][j][0]][incident_elements[i][j][1]];
 }
 
 
@@ -433,6 +425,8 @@ void Solver::FEMInit()
 	for (int i = 0; i < Nn; i++)
 		sol[i] = 4.0;
 		//sol[i] = 4 * double(PI) * sin(double(PI) * nodes_coo[i][0]) * sin(double(PI) * nodes_coo[i][1]) + 4.0;
+
+	//TODO: compress matrices once they are formed
 }
 
 
@@ -458,6 +452,7 @@ void Solver::FEMStep()
 
 	//std::cout << global_mass << std::endl;
 	//std::cout << global_stiffness << std::endl;
+	//std::cin.get();
 
 	VectorXd dir_values(Nn); dir_values.setZero();
 	VectorXd dir_dtvalues(Nn); dir_dtvalues.setZero();
@@ -470,15 +465,15 @@ void Solver::FEMStep()
 			dir_dtvalues[i] = loads.DtDirichletValue(nodes_coo[i], tn);
 		}
 	}
-	for (int i = 0; i < Nn; i++)
-		if (dirichlet_nodes[i])
-		{
-			global_mass.row(i) *= 0;
-			//global_mass.col(i) *= 0;
-			global_mass.coeffRef(i, i) += 1.0;
-			global_stiffness.row(i) *= 0;
-			//global_stiffness.col(i) *= 0;
-		}
+	//for (int i = 0; i < Nn; i++)
+	//	if (dirichlet_nodes[i])
+	//	{
+	//		global_mass.row(i) *= 0;
+	//		//global_mass.col(i) *= 0;
+	//		global_mass.coeffRef(i, i) += 1.0;
+	//		global_stiffness.row(i) *= 0;
+	//		//global_stiffness.col(i) *= 0;
+	//	}
 	global_dirichlet_force = global_stiffness * dir_values + global_mass * dir_dtvalues;
 	//std::cout << global_dirichlet_force << std::endl;
 	global_force = global_internal_force + global_neumann_force - global_dirichlet_force;
@@ -502,20 +497,35 @@ void Solver::FEMStep()
 	//	if (dirichlet_nodes[i])
 	//		global_force[i] = loads.DirichletValue(nodes_coo[i], tn);
 
-	for (int i = 0; i < Nn; i++)
-		if (dirichlet_nodes[i])
-		{
-			//global_mass.row(i) *= 0;
-			global_mass.col(i) *= 0;
-			global_mass.coeffRef(i, i) += 1.0;
-			//global_stiffness.row(i) *= 0;
-			global_stiffness.col(i) *= 0;
-		}
+	//for (int i = 0; i < Nn; i++)
+	//	if (dirichlet_nodes[i])
+	//	{
+	//		//global_mass.row(i) *= 0;
+	//		global_mass.col(i) *= 0;
+	//		global_mass.coeffRef(i, i) += 1.0;
+	//		//global_stiffness.row(i) *= 0;
+	//		global_stiffness.col(i) *= 0;
+	//	}
 	//std::cout << global_mass << std::endl;
 	//std::cout << global_stiffness << std::endl;
 
 	VectorXd global_force_p1 = global_force;
-	SparseMatrix<double> LHS = global_mass + alpha * dt * global_stiffness;
+	SparseMatrix<double, RowMajor> LHS = global_mass + alpha * dt * global_stiffness;
+	//std::cout << LHS << std::endl;
+	//for (int k = 0; k < Nn; k++)
+	//	if (dirichlet_nodes[k])
+	//	{
+	//		LHS.prune([k](int i, int j, double) {return j != k && i >= k; });
+	//	}
+	for (int i = 0; i < Nn; i++)
+		if (dirichlet_nodes[i])
+		{
+			LHS.col(i) *= 0;
+			LHS.coeffRef(i, i) += 1.0;
+		}
+	//std::cout << LHS << std::endl;
+	//std::cin.get();
+
 	VectorXd RHS = (global_mass - (1 - alpha) * dt * global_stiffness) * sol + dt * (alpha * global_force_p1 + (1.0 - alpha) * global_force);
 
 	for (int i = 0; i < Nn; i++)

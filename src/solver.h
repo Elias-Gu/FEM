@@ -30,8 +30,10 @@ public:
 	std::vector<Vector2i> neumann_edges;
 	std::vector<bool> dirichlet_nodes;
 
-	SparseMatrix<double> global_stiffness;
-	SparseMatrix<double> global_mass;
+	SparseMatrix<double, RowMajor> global_stiffness;		// RowMajor for paralle matrix-vector product
+	SparseMatrix<double, RowMajor> global_stiffness_reduced;
+	SparseMatrix<double, RowMajor> global_mass;
+	SparseMatrix<double, RowMajor> global_mass_reduced;
 	VectorXd global_internal_force;
 	VectorXd global_dirichlet_force;
 	VectorXd global_neumann_force;
