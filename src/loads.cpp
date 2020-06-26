@@ -23,12 +23,12 @@ double Loads::InternalForce(const Vector2d& coo)
 std::vector<Vector2i> Loads::NeumannEdges(const std::vector<Vector2d>& coo)
 {
 	std::vector<Vector2i> neumann_edges;
-	//for (int k = 0; k < n - 1; k++)									// Top edge
-	//	neumann_edges.push_back(Vector2i((k + 1) * n - 1, (k + 2) * n - 1));
-	//for (int k = 0; k < n - 1; k++)									// Right edge
-	//	neumann_edges.push_back(Vector2i(n * n - (k + 1), n * n - (k + 2)));
-	//for (int k = 0; k < n - 1; k++)									// Bottom edge
-	//	neumann_edges.push_back(Vector2i((n - 1 - k) * n, (n - 2 - k) * n));
+	for (int k = 0; k < n - 1; k++)									// Top edge
+		neumann_edges.push_back(Vector2i((k + 1) * n - 1, (k + 2) * n - 1));
+	for (int k = 0; k < n - 1; k++)									// Right edge
+		neumann_edges.push_back(Vector2i(n * n - (k + 1), n * n - (k + 2)));
+	for (int k = 0; k < n - 1; k++)									// Bottom edge
+		neumann_edges.push_back(Vector2i((n - 1 - k) * n, (n - 2 - k) * n));
 
 	return neumann_edges;
 }
@@ -75,14 +75,14 @@ std::vector<bool> Loads::DirichletNodes(const std::vector<Vector2d>& coo)
 double Loads::DirichletValue(const Vector2d& coo, const double tn)
 {
 	double value_d = cos(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
-	//return 4.0 * cos(2 * PI * tn);
+	return 4.0 * cos(2 * PI * tn);
 	//return value_d; 
-	return 4.0;
+	//return 4.0;
 }
 
 
 double Loads::DtDirichletValue(const Vector2d& coo, const double tn)
 {
-	return 0.0;
-	//return -8.0 * PI * sin(2 * PI * tn);
+	//return 0.0;
+	return -8.0 * PI * sin(2 * PI * tn);
 }

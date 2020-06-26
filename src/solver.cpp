@@ -470,8 +470,17 @@ void Solver::FEMStep()
 			dir_dtvalues[i] = loads.DtDirichletValue(nodes_coo[i], tn);
 		}
 	}
-	global_dirichlet_force = global_mass * dir_values + global_mass * dir_dtvalues;
-	std::cout << global_dirichlet_force << std::endl;
+	for (int i = 0; i < Nn; i++)
+		if (dirichlet_nodes[i])
+		{
+			global_mass.row(i) *= 0;
+			//global_mass.col(i) *= 0;
+			global_mass.coeffRef(i, i) += 1.0;
+			global_stiffness.row(i) *= 0;
+			//global_stiffness.col(i) *= 0;
+		}
+	global_dirichlet_force = global_stiffness * dir_values + global_mass * dir_dtvalues;
+	//std::cout << global_dirichlet_force << std::endl;
 	global_force = global_internal_force + global_neumann_force - global_dirichlet_force;
 
 	//std::cout << "MASS MATRIX" << std::endl;
@@ -496,10 +505,10 @@ void Solver::FEMStep()
 	for (int i = 0; i < Nn; i++)
 		if (dirichlet_nodes[i])
 		{
-			global_mass.row(i) *= 0;
+			//global_mass.row(i) *= 0;
 			global_mass.col(i) *= 0;
 			global_mass.coeffRef(i, i) += 1.0;
-			global_stiffness.row(i) *= 0;
+			//global_stiffness.row(i) *= 0;
 			global_stiffness.col(i) *= 0;
 		}
 	//std::cout << global_mass << std::endl;
