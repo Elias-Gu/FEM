@@ -2,7 +2,7 @@
 
 using namespace Eigen;
 
-static const int n = 40;
+static const int n = 5;
 static const double dx = 1.0 / (n - 1);
 static const double dt = 0.01;
 

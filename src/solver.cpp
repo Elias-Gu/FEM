@@ -497,15 +497,15 @@ void Solver::FEMStep()
 	//	if (dirichlet_nodes[i])
 	//		global_force[i] = loads.DirichletValue(nodes_coo[i], tn);
 
-	//for (int i = 0; i < Nn; i++)
-	//	if (dirichlet_nodes[i])
-	//	{
-	//		//global_mass.row(i) *= 0;
-	//		global_mass.col(i) *= 0;
-	//		global_mass.coeffRef(i, i) += 1.0;
-	//		//global_stiffness.row(i) *= 0;
-	//		global_stiffness.col(i) *= 0;
-	//	}
+	for (int i = 0; i < Nn; i++)
+		if (dirichlet_nodes[i])
+		{
+			//global_mass.row(i) *= 0;
+			global_mass.col(i) *= 0;
+			global_mass.coeffRef(i, i) += 1.0;
+			//global_stiffness.row(i) *= 0;
+			global_stiffness.col(i) *= 0;
+		}
 	//std::cout << global_mass << std::endl;
 	//std::cout << global_stiffness << std::endl;
 
@@ -516,21 +516,22 @@ void Solver::FEMStep()
 	//	if (dirichlet_nodes[k])
 	//	{
 	//		LHS.prune([k](int i, int j, double) {return j != k && i >= k; });
+	////	}
+	//for (int i = 0; i < Nn; i++)
+	//	if (dirichlet_nodes[i])
+	//	{
+	//		LHS.col(i) *= 0;
+	//		LHS.coeffRef(i, i) += 1.0;
 	//	}
-	for (int i = 0; i < Nn; i++)
-		if (dirichlet_nodes[i])
-		{
-			LHS.col(i) *= 0;
-			LHS.coeffRef(i, i) += 1.0;
-		}
-	//std::cout << LHS << std::endl;
-	//std::cin.get();
-
 	VectorXd RHS = (global_mass - (1 - alpha) * dt * global_stiffness) * sol + dt * (alpha * global_force_p1 + (1.0 - alpha) * global_force);
 
 	for (int i = 0; i < Nn; i++)
 		if (dirichlet_nodes[i])
 			RHS[i] = loads.DirichletValue(nodes_coo[i], tn);
+
+	//std::cout << RHS << std::endl;
+	//std::cin.get();
+
 
 	ConjugateGradient<SparseMatrix<double>, Lower | Upper> solver;
 	sol = solver.compute(LHS).solve(RHS);
