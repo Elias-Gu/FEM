@@ -155,16 +155,16 @@ void Solver::GlobalStiffness()
 			elements_dirichlet_force[e].setZero();
 			for (int i = 0; i < Nv; i++)
 			{
-				if (!dirichlet_nodes[mesh[e][i]])
-				{
+				//if (!dirichlet_nodes[mesh[e][i]])
+				//{
 					for (int j = 0; j < Nv; j++)
 					{
-						if (!dirichlet_nodes[mesh[e][j]])	// Add stiffness entry for free nodes
+						//if (!dirichlet_nodes[mesh[e][j]])	// Add stiffness entry for free nodes
 							global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][j], element_stiffness(i, j)));
-						else								// Add force contribution of dirichlet nodes
-							elements_dirichlet_force[e][i] += element_stiffness(i, j) * loads.DirichletValue(nodes_coo[mesh[e][j]], tn);
+						//else								// Add force contribution of dirichlet nodes
+						//	elements_dirichlet_force[e][i] += element_stiffness(i, j) * loads.DirichletValue(nodes_coo[mesh[e][j]], tn);
 					}
-				}
+				//}
 				//else
 					//global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][i], 1.0 / incident_elements[mesh[e][i]].size()));
 			}
@@ -179,10 +179,10 @@ void Solver::GlobalStiffness()
 	global_stiffness.setFromTriplets(global_entries.begin(), global_entries.end());
 
 	// Form global force created by dirichlet nodes
-	#pragma omp parallel for
-	for (int i = 0; i < Nn; i++)
-		for (size_t j = 0; j < incident_elements[i].size(); j++)
-			global_dirichlet_force[i] += elements_dirichlet_force[incident_elements[i][j][0]][incident_elements[i][j][1]];
+	//#pragma omp parallel for
+	//for (int i = 0; i < Nn; i++)
+	//	for (size_t j = 0; j < incident_elements[i].size(); j++)
+	//		global_dirichlet_force[i] += elements_dirichlet_force[incident_elements[i][j][0]][incident_elements[i][j][1]];
 
 	if (verbose)
 	{
@@ -249,18 +249,18 @@ void Solver::GlobalMass()
 
 			for (int i = 0; i < Nv; i++)
 			{
-				if (!dirichlet_nodes[mesh[e][i]])
-				{
+				//if (!dirichlet_nodes[mesh[e][i]])
+				//{
 					for (int j = 0; j < Nv; j++)
 					{
-						if (!dirichlet_nodes[mesh[e][j]])	// Add stiffness entry for free nodes
+						//if (!dirichlet_nodes[mesh[e][j]])	// Add stiffness entry for free nodes
 							global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][j], element_mass(i, j)));
-						else								// Add force contribution of dirichlet nodes
-							elements_dirichlet_force[e][i] += element_mass(i, j) * loads.DtDirichletValue(nodes_coo[mesh[e][j]], tn);
+						//else								// Add force contribution of dirichlet nodes
+						//	elements_dirichlet_force[e][i] += element_mass(i, j) * loads.DtDirichletValue(nodes_coo[mesh[e][j]], tn);
 					}
-				}
-				else
-					global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][i], 1.0 / incident_elements[mesh[e][i]].size()));
+				//}
+				//else
+				//	global_entries_private.push_back(Triplet<double>(mesh[e][i], mesh[e][i], 1.0 / incident_elements[mesh[e][i]].size()));
 			}
 		}
 
@@ -273,10 +273,10 @@ void Solver::GlobalMass()
 	global_mass.setFromTriplets(global_entries.begin(), global_entries.end());
 
 	// Form global force created by dirichlet nodes
-	#pragma omp parallel for
-	for (int i = 0; i < Nn; i++)
-		for (size_t j = 0; j < incident_elements[i].size(); j++)
-			global_dirichlet_force[i] += elements_dirichlet_force[incident_elements[i][j][0]][incident_elements[i][j][1]];
+	//#pragma omp parallel for
+	//for (int i = 0; i < Nn; i++)
+	//	for (size_t j = 0; j < incident_elements[i].size(); j++)
+	//		global_dirichlet_force[i] += elements_dirichlet_force[incident_elements[i][j][0]][incident_elements[i][j][1]];
 }
 
 
@@ -456,6 +456,22 @@ void Solver::FEMStep()
 	GlobalInternalForce();
 	GlobalNeumannForce();
 
+	//std::cout << global_mass << std::endl;
+	//std::cout << global_stiffness << std::endl;
+
+	VectorXd dir_values(Nn); dir_values.setZero();
+	VectorXd dir_dtvalues(Nn); dir_dtvalues.setZero();
+
+	for (int i = 0; i < Nn; i++)
+	{
+		if (dirichlet_nodes[i])
+		{
+			dir_values[i] = loads.DirichletValue(nodes_coo[i], tn);
+			dir_dtvalues[i] = loads.DtDirichletValue(nodes_coo[i], tn);
+		}
+	}
+	global_dirichlet_force = global_mass * dir_values + global_mass * dir_dtvalues;
+	std::cout << global_dirichlet_force << std::endl;
 	global_force = global_internal_force + global_neumann_force - global_dirichlet_force;
 
 	//std::cout << "MASS MATRIX" << std::endl;
@@ -477,15 +493,27 @@ void Solver::FEMStep()
 	//	if (dirichlet_nodes[i])
 	//		global_force[i] = loads.DirichletValue(nodes_coo[i], tn);
 
+	for (int i = 0; i < Nn; i++)
+		if (dirichlet_nodes[i])
+		{
+			global_mass.row(i) *= 0;
+			global_mass.col(i) *= 0;
+			global_mass.coeffRef(i, i) += 1.0;
+			global_stiffness.row(i) *= 0;
+			global_stiffness.col(i) *= 0;
+		}
+	//std::cout << global_mass << std::endl;
+	//std::cout << global_stiffness << std::endl;
 
 	VectorXd global_force_p1 = global_force;
 	SparseMatrix<double> LHS = global_mass + alpha * dt * global_stiffness;
 	VectorXd RHS = (global_mass - (1 - alpha) * dt * global_stiffness) * sol + dt * (alpha * global_force_p1 + (1.0 - alpha) * global_force);
-	for (int i = 0; i < Nn; i++)
-	if (dirichlet_nodes[i])
-		RHS[i] = loads.DirichletValue(nodes_coo[i], tn);
 
-	ConjugateGradient<SparseMatrix<double>, Eigen::Upper> solver;
+	for (int i = 0; i < Nn; i++)
+		if (dirichlet_nodes[i])
+			RHS[i] = loads.DirichletValue(nodes_coo[i], tn);
+
+	ConjugateGradient<SparseMatrix<double>, Lower | Upper> solver;
 	sol = solver.compute(LHS).solve(RHS);
 
 	tn += dt;
