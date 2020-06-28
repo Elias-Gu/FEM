@@ -5,7 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include "constants.h"
-#include "renderer.h"
+#include "helpers.h"
 #include "solver.h"
 
 
@@ -36,17 +36,16 @@ void FiniteElementMethod()
 int main()
 {	
 	simulation = new Solver();
-	Renderer renderer; 
+	Output output; 
 
 	int step = 0;
 	simulation->Init();
-	renderer.OutputNodeCoordinates(simulation->nodes_coo, simulation->val,step);
+	output.OutputNodeCoordinates(simulation->nodes_coo, simulation->val,step);
 	while (simulation->tn < 8)//step < 2)
 	{
 		step++;
 		simulation->Step();
-		renderer.OutputNodeCoordinates(simulation->nodes_coo, simulation->val, step);
-
+		output.OutputNodeCoordinates(simulation->nodes_coo, simulation->val, step);
 	}
 
 	std::cin.get();
