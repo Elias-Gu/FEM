@@ -142,7 +142,7 @@ Matrix3d Solver::ElementStiffness(const std::vector<Vector2d>& vertices_coo)
 
 void Solver::GlobalStiffness()
 {
-	ScopedTimer timer("", &time_global_stiffness, false);
+	// ScopedTimer timer("", &time_global_stiffness, false);
 
 	std::vector<Triplet<double>> global_entries;
 
@@ -214,7 +214,7 @@ Matrix3d Solver::ElementMass(const std::vector<Vector2d>& vertices_coo)
 
 void Solver::GlobalMass()
 {
-	ScopedTimer timer("", &time_global_mass, false);
+	// ScopedTimer timer("", &time_global_mass, false);
 
 	std::vector<Triplet<double>> global_entries;
 
@@ -383,7 +383,7 @@ VectorXd Solver::GlobalNeumannForce(const double _tn)
 
 void Solver::TotalForce(const double _tn)
 {
-	ScopedTimer timer("", &time_global_force, false);
+	// ScopedTimer timer("", &time_global_force, false);
 
 	// Build internal and neumann force vectors at tn and tn+1
 	VectorXd global_internal_force = GlobalInternalForce(_tn);
@@ -442,12 +442,13 @@ void Solver::Init()
 
 void Solver::Step()
 {
+	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+
 	// New force state
 	global_force = global_force_np1;
 	TotalForce(tn);					// Update global_force_np1 value
 
 	// Build system
-	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
 	SparseMatrix<double, RowMajor> LHS = global_mass_reduced + alpha * dt * global_stiffness_reduced;
 	VectorXd RHS = (global_mass_reduced - (1 - alpha) * dt * global_stiffness_reduced) * val + dt * (alpha * global_force_np1 + (1.0 - alpha) * global_force);
