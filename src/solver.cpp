@@ -4,7 +4,7 @@
 Solver::Solver()
 {
 	// Initialize time & coefficient.
-	alpha = 0.75;
+	alpha = 1.0;
 	if (alpha < 0.5)
 	{
 		std::cout << "Scheme might not be stable for this value of alpha." << std::endl;
@@ -64,9 +64,6 @@ Solver::Solver()
 	global_stiffness_reduced.resize(Nn, Nn);
 	global_mass.resize(Nn, Nn);
 	global_mass_reduced.resize(Nn, Nn);
-	//global_internal_force.setZero(Nn);
-	//global_dirichlet_force.setZero(Nn);
-	//global_neumann_force.setZero(Nn);
 	global_force.setZero(Nn);
 	global_force_np1.setZero(Nn);
 
@@ -145,9 +142,7 @@ Matrix3d Solver::ElementStiffness(const std::vector<Vector2d>& vertices_coo)
 
 void Solver::GlobalStiffness()
 {
-	auto start = std::chrono::high_resolution_clock::now();
-	if (verbose)
-		std::cout << "GlobalStiffness ... ";
+	ScopedTimer timer("", &time_global_stiffness, false);
 
 	std::vector<Triplet<double>> global_entries;
 
@@ -184,15 +179,6 @@ void Solver::GlobalStiffness()
 
 	global_stiffness.setFromTriplets(global_entries.begin(), global_entries.end());
 	global_stiffness.makeCompressed();
-
-	if (verbose)
-	{
-		auto stop = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> elapsed = stop - start;
-		time_global_stiffness = (double)(elapsed.count() * 1000.0);
-		std::cout << "      DONE";
-		std::cout << " -- " << time_global_stiffness << " ms" << std::endl;
-	}
 }
 
 
@@ -228,6 +214,8 @@ Matrix3d Solver::ElementMass(const std::vector<Vector2d>& vertices_coo)
 
 void Solver::GlobalMass()
 {
+	ScopedTimer timer("", &time_global_mass, false);
+
 	std::vector<Triplet<double>> global_entries;
 
 	// Each thread creates its own vector of triplets
@@ -307,10 +295,6 @@ Vector3d Solver::ElementInternalForce(const std::vector<Vector2d>& vertices_coo,
 
 VectorXd Solver::GlobalInternalForce(const double _tn)
 {
-	auto start = std::chrono::high_resolution_clock::now();
-	if (verbose)
-		std::cout << "GlobalInternalForce ... ";
-
 	VectorXd global_internal_force(Nn); global_internal_force.setZero();
 	std::vector<Vector3d> elements_internal_force(Ne);
 
@@ -329,15 +313,6 @@ VectorXd Solver::GlobalInternalForce(const double _tn)
 	for (int i = 0; i < Nn; i++)
 		for (size_t j = 0; j < incident_elements[i].size(); j++)
 			global_internal_force[i] += elements_internal_force[incident_elements[i][j][0]][incident_elements[i][j][1]];
-
-	if (verbose)
-	{
-		auto stop = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> elapsed = stop - start;
-		time_global_internal_force = (double)(elapsed.count() * 1000.0);
-		std::cout << "  DONE";
-		std::cout << " -- " << time_global_internal_force << " ms" << std::endl;
-	}
 
 	return global_internal_force;
 }
@@ -381,10 +356,6 @@ Vector2d Solver::ElementNeumannForce(const std::vector<Vector2d>& vertices_coo, 
 
 VectorXd Solver::GlobalNeumannForce(const double _tn)
 {
-	auto start = std::chrono::high_resolution_clock::now();
-	if (verbose)
-		std::cout << "GlobalNeumannForce ... ";
-
 	VectorXd global_neumann_force(Nn); global_neumann_force.setZero();
 
 	for (size_t e = 0; e < neumann_edges.size(); e++)
@@ -400,15 +371,6 @@ VectorXd Solver::GlobalNeumannForce(const double _tn)
 			global_neumann_force[neumann_edges[e][i]] += element_neumann_force[i];
 	}
 
-	if (verbose)
-	{
-		auto stop = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> elapsed = stop - start;
-		time_global_neumann_force = (double)(elapsed.count() * 1000.0);
-		std::cout << "   DONE";
-		std::cout << " -- " << time_global_neumann_force << " ms" << std::endl;
-	}
-
 	return global_neumann_force;
 }
 
@@ -421,6 +383,8 @@ VectorXd Solver::GlobalNeumannForce(const double _tn)
 
 void Solver::TotalForce(const double _tn)
 {
+	ScopedTimer timer("", &time_global_force, false);
+
 	// Build internal and neumann force vectors at tn and tn+1
 	VectorXd global_internal_force = GlobalInternalForce(_tn);
 	VectorXd global_neumann_force = GlobalNeumannForce(_tn);
@@ -429,7 +393,7 @@ void Solver::TotalForce(const double _tn)
 	VectorXd dir_values(Nn), dir_dtvalues(Nn);
 	dir_values.setZero(), dir_dtvalues.setZero();
 
-	#pragma omp parallel for
+	#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < Nn; i++)
 	{
 		if (dirichlet_nodes[i])
@@ -483,24 +447,36 @@ void Solver::Step()
 	TotalForce(tn);					// Update global_force_np1 value
 
 	// Build system
+	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+
 	SparseMatrix<double, RowMajor> LHS = global_mass_reduced + alpha * dt * global_stiffness_reduced;
 	VectorXd RHS = (global_mass_reduced - (1 - alpha) * dt * global_stiffness_reduced) * val + dt * (alpha * global_force_np1 + (1.0 - alpha) * global_force);
 
 	// Enforce dirichlet boundary conditions
+	#pragma omp parallel for schedule (dynamic)
 	for (int i = 0; i < Nn; i++)
 		if (dirichlet_nodes[i])
 			RHS[i] = loads.DirichletValue(nodes_coo[i], tn);
 
 	// Solve linear system
 	ConjugateGradient<SparseMatrix<double>, Lower | Upper> solver;
+	solver.setTolerance(1e-10);					// Can be lowered
 	val = solver.compute(LHS).solve(RHS);
 	if (solver.info() != Success)
 	{
 		std::cout << "Conjugate Gradient solver failed" << std::endl;
 		return;
 	}
-	//std::cout << "#iterations:     " << cg.iterations() << std::endl;
-	//std::cout << "estimated error: " << cg.error() << std::endl;
+
+	// Timer and output
+	auto stop = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = stop - start;
+	time_system = (double)(elapsed.count() * 1000.0);
+
+	if (verbose)
+	{
+		std::cout << "Sim time: " << std::setfill(' ') << std::setw(9) << std::fixed << std::setprecision(3) << tn << " ms     ||     Comp time" << std::setfill(' ') << std::setw(9) << std::fixed << std::setprecision(3) << time_system + time_global_force << " ms" << std::endl;
+	}
 
 	// Update time
 	tn += dt;

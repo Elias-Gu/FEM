@@ -10,6 +10,7 @@
 #include <Eigen/Sparse>
 
 #include "constants.h"
+#include "helpers.h"
 #include "loads.h"
 
 /*
@@ -47,10 +48,9 @@ public:
 	
 	bool verbose;
 	double time_global_stiffness;
-	double time_global_internal_force;
-	double time_global_neumann_force;
+	double time_global_mass;
 	double time_global_force;
-	double time_solve;
+	double time_system;
 
 
 	

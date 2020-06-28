@@ -115,20 +115,25 @@ struct ScopedTimer
 	bool verbose;
 	std::chrono::high_resolution_clock::time_point start;
 	
-	ScopedTimer(const std::string& _task_name = "", double* _time = nullptr, const bool _verbose = false)
+
+	ScopedTimer(const std::string& _task_name = "", double* _time = nullptr, const bool _verbose = true)
 		: task_name(_task_name),
 		time(_time),
 		verbose(_verbose),
 		start(std::chrono::high_resolution_clock::now())
 	{}
 
+
 	~ScopedTimer()
 	{
 		auto stop = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = stop - start;
-		*time = (double)(elapsed.count() * 1000.0);
+		double time_elapsed = (double)(elapsed.count() * 1000.0);
+
+		if (time)
+			*time = time_elapsed;
 
 		if (verbose)
-			std::cout << task_name << " ran in " << *time << " ms." << std::endl;
+			std::cout << task_name << " ran in " << time_elapsed << " ms." << std::endl;
 	}
 };
