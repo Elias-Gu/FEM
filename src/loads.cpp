@@ -5,7 +5,7 @@
 ----------------------------------------------------------------------- */
 
 
-double Loads::InternalForce(const Vector2d& coo)
+double Loads::InternalForce(const Vector2d& coo, const double tn)
 {
 	//double force_f = 4 * double(PI) * sin(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
 	double force_f = 4 * double(PI) * sin(double(PI) * coo[0]) * sin(double(PI) * coo[1]);

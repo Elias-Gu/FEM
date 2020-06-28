@@ -39,13 +39,13 @@ int main()
 	Renderer renderer; 
 
 	int step = 0;
-	simulation->FEMInit();
-	renderer.OutputNodeCoordinates(simulation->nodes_coo, simulation->sol,step);
+	simulation->Init();
+	renderer.OutputNodeCoordinates(simulation->nodes_coo, simulation->val,step);
 	while (simulation->tn < 8)//step < 2)
 	{
 		step++;
-		simulation->FEMStep();
-		renderer.OutputNodeCoordinates(simulation->nodes_coo, simulation->sol, step);
+		simulation->Step();
+		renderer.OutputNodeCoordinates(simulation->nodes_coo, simulation->val, step);
 
 	}
 

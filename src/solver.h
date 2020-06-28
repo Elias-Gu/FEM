@@ -12,12 +12,18 @@
 #include "constants.h"
 #include "loads.h"
 
+/*
+References:
+"The Finite Element Method" by Thomas J.R. Hugues
+"Numerical Solution of Partial Differential Equations by the Finite Element Method" by Claes Johnson
+*/
 
 class Solver
 {
 public:
 
 	/* Data */
+	double alpha;											// Coefficient for generalized trapezoidal method, in [0.1]
 	double tn;
 	int Nn;													// Number of nodes
 	int Ne;													// Number of elements
@@ -31,16 +37,13 @@ public:
 	std::vector<bool> dirichlet_nodes;
 
 	SparseMatrix<double, RowMajor> global_stiffness;		// RowMajor for paralle matrix-vector product
-	SparseMatrix<double, RowMajor> global_stiffness_reduced;
+	SparseMatrix<double, RowMajor> global_stiffness_reduced;// Might be faster with ColumnMajor though
 	SparseMatrix<double, RowMajor> global_mass;
 	SparseMatrix<double, RowMajor> global_mass_reduced;
-	VectorXd global_internal_force;
-	VectorXd global_dirichlet_force;
-	VectorXd global_neumann_force;
 	VectorXd global_force;
+	VectorXd global_force_np1;
 
-	VectorXd sol;
-	VectorXd v_sol;
+	VectorXd val;
 	
 	bool verbose;
 	double time_global_stiffness;
@@ -68,13 +71,13 @@ public:
 	Matrix3d ElementMass(const std::vector<Vector2d>& vertices_coo);
 	void GlobalMass();
 
-	Vector3d ElementInternalForce(const std::vector<Vector2d>& vertices_coo);
-	void GlobalInternalForce();
+	Vector3d ElementInternalForce(const std::vector<Vector2d>& vertices_coo, const double _tn);
+	VectorXd GlobalInternalForce(const double _tn);
 
-	Vector2d ElementNeumannForce(const std::vector<Vector2d>& vertices_coo);
-	void GlobalNeumannForce();
+	Vector2d ElementNeumannForce(const std::vector<Vector2d>& vertices_coo, const double _tn);
+	VectorXd GlobalNeumannForce(const double _tn);
 
-	void FEMInit();
-	void FEMResetMatrices();
-	void FEMStep();
+	void Init();
+	void TotalForce(const double _tn);
+	void Step();
 };
