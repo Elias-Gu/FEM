@@ -24,6 +24,10 @@ class Solver
 public:
 
 	/* Data */
+	double rho;												// Density
+	double capacity;										// Heat capacity
+	double conduc;											// Thermal conductivity
+
 	double alpha;											// Coefficient for generalized trapezoidal method, in [0.1]
 	double tn;
 	int Nn;													// Number of nodes

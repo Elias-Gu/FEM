@@ -3,6 +3,12 @@
 /* Constructors */
 Solver::Solver()
 {
+	// Initialize material properties
+	rho = 1.0;
+	capacity = 1.0;
+	conduc = 1.0;
+
+
 	// Initialize time & coefficient.
 	alpha = 1.0;
 	if (alpha < 0.5)
@@ -136,7 +142,7 @@ Matrix3d Solver::ElementStiffness(const std::vector<Vector2d>& vertices_coo)
 		}
 	}
 
-	return element_stiffness;
+	return element_stiffness * conduc;
 }
 
 
@@ -206,7 +212,7 @@ Matrix3d Solver::ElementMass(const std::vector<Vector2d>& vertices_coo)
 		for (int j = 0; j < Nv; j++)
 			for (int k = 0; k < Nv; k++)
 				element_mass(i, j) += N_iso[i][k] * N_iso[j][k];
-	element_mass *= (Dm_det * area / 3.0);
+	element_mass *= (Dm_det * area / 3.0) * rho * capacity;
 
 	return element_mass;
 }
@@ -476,7 +482,7 @@ void Solver::Step()
 
 	if (verbose)
 	{
-		std::cout << "Sim time: " << std::setfill(' ') << std::setw(9) << std::fixed << std::setprecision(3) << tn << " ms     ||     Comp time" << std::setfill(' ') << std::setw(9) << std::fixed << std::setprecision(3) << time_system + time_global_force << " ms" << std::endl;
+		std::cout << "Sim time: " << std::setfill(' ') << std::setw(9) << std::fixed << std::setprecision(3) << tn << " s     ||     Comp time" << std::setfill(' ') << std::setw(9) << std::fixed << std::setprecision(3) << time_system + time_global_force << " ms" << std::endl;
 	}
 
 	// Update time
