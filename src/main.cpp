@@ -6,13 +6,15 @@
 
 #include "constants.h"
 #include "helpers.h"
-#include "solver.h"
+#include "heat_solver.h"
+#include "poisson_solver.h"
 
 
 /* Declarations */
 void initGLContext();
 GLFWwindow* initGLFWContext();
-Solver* simulation;
+HeatSolver* simulation;
+PoissonSolver* simulation2;
 
 
 
@@ -35,7 +37,9 @@ void FiniteElementMethod()
 
 int main()
 {	
-	simulation = new Solver();
+	simulation = new HeatSolver();
+	simulation2 = new PoissonSolver();
+	simulation2->FEMSolver();
 	Output output; 
 
 	int step = 0;

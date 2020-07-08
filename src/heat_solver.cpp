@@ -1,7 +1,7 @@
-#include "solver.h"
+#include "heat_solver.h"
 
 /* Constructors */
-Solver::Solver()
+HeatSolver::HeatSolver()
 {
 	// Initialize material properties
 	rho = 1.0;
@@ -90,7 +90,7 @@ Solver::Solver()
 ----------------------------------------------------------------------- */
 
 
-Vector3d Solver::ShapeFunction(const Vector2d& local_coo)
+Vector3d HeatSolver::ShapeFunction(const Vector2d& local_coo)
 {
 	Vector3d N;
 	N[0] = 1 - local_coo[0] - local_coo[1];
@@ -100,7 +100,7 @@ Vector3d Solver::ShapeFunction(const Vector2d& local_coo)
 }
 
 
-Vector2d Solver::LineShapeFunction(const double local_coo)
+Vector2d HeatSolver::LineShapeFunction(const double local_coo)
 {
 	Vector2d Nl;
 	Nl[0] = 1 - local_coo;
@@ -109,7 +109,7 @@ Vector2d Solver::LineShapeFunction(const double local_coo)
 }
 
 
-std::vector<Vector2d> Solver::DShapeFunction()
+std::vector<Vector2d> HeatSolver::DShapeFunction()
 {
 	std::vector<Vector2d> dN(3);
 	dN[0] = Vector2d(-1.0, -1.0);
@@ -125,7 +125,7 @@ std::vector<Vector2d> Solver::DShapeFunction()
 ----------------------------------------------------------------------- */
 
 
-Matrix3d Solver::ElementStiffness(const std::vector<Vector2d>& vertices_coo)
+Matrix3d HeatSolver::ElementStiffness(const std::vector<Vector2d>& vertices_coo)
 {
 	std::vector<Vector2d> dN = DShapeFunction();
 
@@ -146,7 +146,7 @@ Matrix3d Solver::ElementStiffness(const std::vector<Vector2d>& vertices_coo)
 }
 
 
-void Solver::GlobalStiffness()
+void HeatSolver::GlobalStiffness()
 {
 	// ScopedTimer timer("", &time_global_stiffness, false);
 
@@ -193,7 +193,7 @@ void Solver::GlobalStiffness()
 |							 MASS MATRIX								 |
 ----------------------------------------------------------------------- */
 
-Matrix3d Solver::ElementMass(const std::vector<Vector2d>& vertices_coo)
+Matrix3d HeatSolver::ElementMass(const std::vector<Vector2d>& vertices_coo)
 {
 	double area = 0.5;
 	std::vector<Vector2d> mids_iso = { Vector2d(0.5, 0.0),
@@ -218,7 +218,7 @@ Matrix3d Solver::ElementMass(const std::vector<Vector2d>& vertices_coo)
 }
 
 
-void Solver::GlobalMass()
+void HeatSolver::GlobalMass()
 {
 	// ScopedTimer timer("", &time_global_mass, false);
 
@@ -269,7 +269,7 @@ void Solver::GlobalMass()
 ----------------------------------------------------------------------- */
 
 
-Vector3d Solver::ElementInternalForce(const std::vector<Vector2d>& vertices_coo, const double _tn)
+Vector3d HeatSolver::ElementInternalForce(const std::vector<Vector2d>& vertices_coo, const double _tn)
 {
 	// See 12.2 in Numerical Solution of Partial Differential Equations by the FEM, by C.Johnson
 	// TODO: time and see if quadrature of degree 1 is much better
@@ -299,7 +299,7 @@ Vector3d Solver::ElementInternalForce(const std::vector<Vector2d>& vertices_coo,
 }
 
 
-VectorXd Solver::GlobalInternalForce(const double _tn)
+VectorXd HeatSolver::GlobalInternalForce(const double _tn)
 {
 	VectorXd global_internal_force(Nn); global_internal_force.setZero();
 	std::vector<Vector3d> elements_internal_force(Ne);
@@ -330,7 +330,7 @@ VectorXd Solver::GlobalInternalForce(const double _tn)
 ----------------------------------------------------------------------- */
 
 
-Vector2d Solver::ElementNeumannForce(const std::vector<Vector2d>& vertices_coo, const double _tn)
+Vector2d HeatSolver::ElementNeumannForce(const std::vector<Vector2d>& vertices_coo, const double _tn)
 {
 
 	double length = Vector2d(vertices_coo[1] - vertices_coo[0]).norm();
@@ -360,7 +360,7 @@ Vector2d Solver::ElementNeumannForce(const std::vector<Vector2d>& vertices_coo, 
 }
 
 
-VectorXd Solver::GlobalNeumannForce(const double _tn)
+VectorXd HeatSolver::GlobalNeumannForce(const double _tn)
 {
 	VectorXd global_neumann_force(Nn); global_neumann_force.setZero();
 
@@ -387,7 +387,7 @@ VectorXd Solver::GlobalNeumannForce(const double _tn)
 ----------------------------------------------------------------------- */
 
 
-void Solver::TotalForce(const double _tn)
+void HeatSolver::TotalForce(const double _tn)
 {
 	// ScopedTimer timer("", &time_global_force, false);
 
@@ -422,7 +422,7 @@ void Solver::TotalForce(const double _tn)
 ----------------------------------------------------------------------- */
 
 
-void Solver::Init()
+void HeatSolver::Init()
 {
 	// Build semi-reduced matrices
 	GlobalStiffness();
@@ -446,7 +446,7 @@ void Solver::Init()
 }
 
 
-void Solver::Step()
+void HeatSolver::Step()
 {
 	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 

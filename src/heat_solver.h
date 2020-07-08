@@ -19,7 +19,7 @@ References:
 "Numerical Solution of Partial Differential Equations by the Finite Element Method" by Claes Johnson
 */
 
-class Solver
+class HeatSolver
 {
 public:
 
@@ -59,8 +59,8 @@ public:
 
 	
 	/* Constructors */
-	Solver();
-	~Solver() {}
+	HeatSolver();
+	~HeatSolver() {}
 
 
 
