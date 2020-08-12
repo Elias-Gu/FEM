@@ -12,4 +12,4 @@ static const int X_WINDOW = 1400;
 static const int Y_WINDOW = X_WINDOW * Y_GRID / X_GRID;
 
 
-#define PI 3.1415927410125732421875
+constexpr auto PI = 3.1415927410125732421875;
