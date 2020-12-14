@@ -35,7 +35,7 @@ int main()
 	heat_solver->Init();
 
 	int step_counter = 0;
-	double final_time = 8.0;
+	double final_time = 4.0;
 	output.OutputNodeCoordinates(heat_solver->nodes_coo, heat_solver->val, step_counter);
 	while (heat_solver->tn < final_time)
 	{

@@ -15,9 +15,8 @@ double Loads::InternalForce(const Vector2d& coo)
 
 double Loads::InternalForce(const Vector2d& coo, const double tn)
 {
-	//double force_f = 4 * double(PI) * sin(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
 	double force_f = 4 * double(PI) * sin(double(PI) * coo[0]) * sin(double(PI) * coo[1]);
-	//return 2.0;
+
 	return force_f;
 }
 
@@ -52,21 +51,17 @@ double Loads::NeumannForce(const Vector2d& coo, const Vector2d& normal)
 
 double Loads::NeumannForce(const Vector2d& coo, const Vector2d& normal, const double tn)
 {
-	//Vector2d force_g = Vector2d(2 * double(PI) * cos(2 * double(PI) * coo[0]), -2 * double(PI) * sin(2 * double(PI) * coo[1]));
 	Vector2d force_g;
 
 	if (tn < 2)
 		force_g = Vector2d(2 * double(PI) * sin(2 * double(PI) * coo[1]), 2 * double(PI) * sin(2 * double(PI) * coo[1]));
 	else
 		force_g = Vector2d(0, 0);
-	//return force_g.dot(normal);
-	//return 0.0;
-	//return 5.0;
+
 	if (coo[0] == 1)
 		return 4.0 * force_g.dot(normal);
 	else
 		return 0.0;
-	//return 0.0;
 }
 
 
@@ -98,15 +93,11 @@ double Loads::DirichletValue(const Vector2d& coo)
 
 double Loads::DirichletValue(const Vector2d& coo, const double tn)
 {
-	double value_d = cos(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
-	return 4.0 * cos(2 * PI * tn);
-	//return value_d; 
-	//return 4.0;
+	return 4.0 * cos(2 * double(PI) * tn);
 }
 
 
 double Loads::DtDirichletValue(const Vector2d& coo, const double tn)
 {
-	//return 0.0;
-	return -8.0 * PI * sin(2 * PI * tn);
+	return -8.0 * double(PI) * sin(2 * double(PI) * tn);
 }
