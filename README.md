@@ -19,7 +19,7 @@ Finite Element Implementation of the following problems:
 ## Examples
 Plots are done with MATLAB.
 #### Poisson equation:
-![poisson](https://raw.githubusercontent.com/Elias-Gu/FEM/master/FEM/out/poisson_solution.png?token=AKYKRIM5FIFEZ6VTSMEQOBS74APRA)
+![poisson](FEM/out/poisson_solution.svg)
 
 #### Heat equation:
 ![heat](FEM/out/heat_solution.gif)
