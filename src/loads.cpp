@@ -17,8 +17,8 @@ double Loads::InternalForce(const Vector2d& coo, const double tn)
 {
 	//double force_f = 4 * double(PI) * sin(2 * double(PI) * coo[0]) * cos(2 * double(PI) * coo[1]);
 	double force_f = 4 * double(PI) * sin(double(PI) * coo[0]) * sin(double(PI) * coo[1]);
-	return 2.0;
-	//return force_f;
+	//return 2.0;
+	return force_f;
 }
 
 
@@ -44,7 +44,7 @@ std::vector<Vector2i> Loads::NeumannEdges(const std::vector<Vector2d>& coo)
 
 double Loads::NeumannForce(const Vector2d& coo, const Vector2d& normal)
 {
-	Vector2d force_g = Vector2d(2 * double(PI) * cos(2 * double(PI) * coo[0]), -2 * double(PI) * sin(2 * double(PI) * coo[1]));
+	Vector2d force_g = Vector2d(double(PI)/5.0 * cos(2 * double(PI) * coo[0]), sin(2 * double(PI) * coo[1]));
 
 	return force_g.dot(normal);
 }

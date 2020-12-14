@@ -1,7 +1,7 @@
 #include "heat_solver.h"
 
 /* Constructors */
-HeatSolver::HeatSolver()
+HeatSolver::HeatSolver(const bool _verbose) : verbose(_verbose)
 {
 	// Initialize material properties
 	rho = 1.0;
@@ -73,8 +73,6 @@ HeatSolver::HeatSolver()
 	global_force.setZero(Nn);
 	global_force_np1.setZero(Nn);
 
-
-	verbose = true;
 	if (verbose)
 	{
 		std::cout << "Number of nodes:    " << Nn << std::endl;

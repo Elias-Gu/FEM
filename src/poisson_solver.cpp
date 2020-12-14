@@ -1,7 +1,7 @@
 #include "poisson_solver.h"
 
 /* Constructors */
-PoissonSolver::PoissonSolver()
+PoissonSolver::PoissonSolver(const bool _verbose) : verbose(_verbose)
 {
 	// Triangular mesh
 	Nn = n * n;
@@ -53,7 +53,6 @@ PoissonSolver::PoissonSolver()
 	global_force.setZero(Nn);
 	sol.resize(Nn);
 
-	verbose = true;
 	if (verbose)
 	{
 		std::cout << "Number of nodes:    " << Nn << std::endl;

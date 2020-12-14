@@ -47,7 +47,7 @@ public:
 
 	
 	/* Constructors */
-	PoissonSolver();
+	PoissonSolver(const bool _verbose = true);
 	~PoissonSolver() {}
 
 

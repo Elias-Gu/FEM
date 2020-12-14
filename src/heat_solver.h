@@ -59,7 +59,7 @@ public:
 
 	
 	/* Constructors */
-	HeatSolver();
+	HeatSolver(const bool _verbose = true);
 	~HeatSolver() {}
 
 
